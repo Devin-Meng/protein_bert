@@ -169,9 +169,8 @@ if __name__ == "__main__":
                 stat = list(np.mean(stat, axis=0))
                 print('#prog[%.6f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch/epochsize, *stat, tnow-tchk))
                 #print('#prog[%.1f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch / epochsize, *stat, tnow - tchk))
-                last_lr = scheduler.get_last_lr()
                 wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3],
-                           "epoch": batch//epochsize +1, "current_lr": last_lr})
+                           "epoch": batch//epochsize +1, "current_lr": optimizer.param_groups[0]['lr']})
                 stat, tchk = [], tnow
 
     # Mark the run as finished
