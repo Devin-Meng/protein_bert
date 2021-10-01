@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, Sampler
 
 maxfraglen = 32*8
 minseqlen, maxseqlen = 32*2, maxfraglen*2
-ifn = '/home/Zhaoxu/Project/protein_bert/dataset/data_extract250_0000.hdf5'
+ifn = '/home/Zhaoxu/Project/dataset/data_extract250_0000.hdf5'
 
 
 class SeqSampler(Sampler):

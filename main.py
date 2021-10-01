@@ -19,7 +19,7 @@ from model import *
 
 
 lr_init = 4e-4
-lr_final = 5e-6
+lr_final = 1e-5
 sched_cycle = 10
 weight_decay = 1e-2
 batchsize = 150
@@ -29,8 +29,8 @@ dimhead = 64
 numhead = 8
 depth = 12
 
-chk= '/home/Zhaoxu/Project/protein_bert/repository/former_output/lr_200/model.sav175'
-run_name = 'ep5-addeta'
+chk= '/home/Zhaoxu/Project/output/ep5-addeta/model.sav2'
+run_name = 'ep5-eta5'
 
 def dist_setting():
     """make sure DDP work well"""
@@ -109,6 +109,7 @@ if __name__ == "__main__":
     ddp_model.train()
     config = {
         "lr": lr,
+        "lr_final": lr_final,
         "lr_factor": lr_factor,
         "batchsize": batchsize,
         "epochsize": epochsize,
@@ -168,7 +169,9 @@ if __name__ == "__main__":
                 stat = list(np.mean(stat, axis=0))
                 print('#prog[%.6f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch/epochsize, *stat, tnow-tchk))
                 #print('#prog[%.1f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch / epochsize, *stat, tnow - tchk))
-                wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3], "epoch": batch//epochsize +1})
+                last_lr = scheduler.get_last_lr()
+                wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3],
+                           "epoch": batch//epochsize +1, "current_lr": last_lr})
                 stat, tchk = [], tnow
 
     # Mark the run as finished
