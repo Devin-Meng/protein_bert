@@ -18,7 +18,7 @@ from data import *
 from model import *
 
 
-lr_init = 2e-5
+lr_init = 1e-5
 sched_cycle = 10
 weight_decay = 1e-2
 batchsize = 150
