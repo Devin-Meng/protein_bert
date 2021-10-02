@@ -18,10 +18,10 @@ from data import *
 from model import *
 
 
-lr_init = 1e-5
+lr_init = 2e-5
 sched_cycle = 10
 weight_decay = 1e-2
-batchsize = 150
+batchsize = 50
 warmup_ratio = 1 / 240
 num_training_steps = 1000000
 
