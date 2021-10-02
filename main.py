@@ -18,19 +18,20 @@ from data import *
 from model import *
 
 
-lr_init = 4e-4
-lr_final = 1e-5
+lr_init = 2e-5
 sched_cycle = 10
 weight_decay = 1e-2
 batchsize = 150
+warmup_ratio = 1 / 240
+num_training_steps = 1000000
 
 width = 256
 dimhead = 64
 numhead = 8
 depth = 12
 
-chk= '/home/Zhaoxu/Project/output/ep5-addeta/model.sav2'
-run_name = 'ep5-eta5'
+chk= '/home/Zhaoxu/Project/storage/repository/former_output/ouput_50part/model.sav7'
+run_name = 'ep5-sav7'
 
 def dist_setting():
     """make sure DDP work well"""
@@ -97,11 +98,19 @@ if __name__ == "__main__":
     lr_factor = math.sqrt(world)
     lr = lr_init * math.sqrt(world)
     optimizer = optim.AdamW(pgrp, lr=lr)
-
-    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,1,2, eta_min=lr_final)
-    if rank == 0:
+    
+    def lr_lambda(current_step: int):
+        num_warmup_steps = float(warmup_ratio * num_training_steps)
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        return max(
+            0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
+        )
+    
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+    #if rank == 0:
     #     optimizer.load_state_dict(pt.load(chk)['optimizer'])
-        scheduler.load_state_dict(pt.load(chk)['scheduler'])
+    #     scheduler.load_state_dict(pt.load(chk)['scheduler'])
 
     schedsize = 2 * len(sampler) // sched_cycle // batchsize // world
     epochsize = schedsize * sched_cycle // 2
@@ -109,7 +118,6 @@ if __name__ == "__main__":
     ddp_model.train()
     config = {
         "lr": lr,
-        "lr_final": lr_final,
         "lr_factor": lr_factor,
         "batchsize": batchsize,
         "epochsize": epochsize,
