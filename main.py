@@ -18,20 +18,19 @@ from data import *
 from model import *
 
 
-lr_init = 2e-5
-sched_cycle = 10
+lr_init = 5e-4
+sched_cycle = 5
 weight_decay = 1e-2
-batchsize = 50
-warmup_ratio = 1 / 240
-num_training_steps = 1000000
+batchsize = 300
+warmup_ratio = 1 / 480
 
 width = 256
 dimhead = 64
 numhead = 8
 depth = 12
 
-chk= '/home/Zhaoxu/Project/storage/repository/former_output/ouput_50part/model.sav7'
-run_name = 'ep5-sav7'
+# chk= '/home/Zhaoxu/Project/protein_bert/output/lr_200/model.sav175'
+run_name = 'ep6-fromstart'
 
 def dist_setting():
     """make sure DDP work well"""
@@ -89,26 +88,27 @@ if __name__ == "__main__":
 
     print('building model ...')
     model = Transformer(width, dimhead, numhead, depth).cuda()
-    if rank == 0:
-        try: model.load_state_dict(pt.load(chk)['model'])
-        except: pass
+    # if rank == 0:
+    #     try: model.load_state_dict(pt.load(chk)['model'])
+    #     except: pass
     ddp_model = DDP(model, device_ids=[rank])
 
     pgrp = param_group()
     lr_factor = math.sqrt(world)
     lr = lr_init * math.sqrt(world)
     optimizer = optim.AdamW(pgrp, lr=lr)
-    
+
     def lr_lambda(current_step: int):
+        num_training_steps = 2_000_000
         num_warmup_steps = float(warmup_ratio * num_training_steps)
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
         return max(
             0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
         )
-    
+
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
-    #if rank == 0:
+    # if rank == 0:
     #     optimizer.load_state_dict(pt.load(chk)['optimizer'])
     #     scheduler.load_state_dict(pt.load(chk)['scheduler'])
 
@@ -177,8 +177,8 @@ if __name__ == "__main__":
                 stat = list(np.mean(stat, axis=0))
                 print('#prog[%.6f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch/epochsize, *stat, tnow-tchk))
                 #print('#prog[%.1f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch / epochsize, *stat, tnow - tchk))
-                wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3],
-                           "epoch": batch//epochsize +1, "current_lr": optimizer.param_groups[0]['lr']})
+                wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3], 
+                    "epoch": batch//epochsize +1, "current_lr": optimizer.param_groups[0]['lr']})
                 stat, tchk = [], tnow
 
     # Mark the run as finished
