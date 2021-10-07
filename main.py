@@ -18,19 +18,18 @@ from data import *
 from model import *
 
 
-lr_init = 5e-4
-sched_cycle = 5
+lr = 8e-6
+sched_cycle = 64
 weight_decay = 1e-2
-batchsize = 300
-warmup_ratio = 1 / 480
+batchsize = 50
+warmup_ratio = 1 / 120
 
 width = 256
 dimhead = 64
 numhead = 8
 depth = 12
 
-# chk= '/home/Zhaoxu/Project/protein_bert/output/lr_200/model.sav175'
-run_name = 'ep6-fromstart'
+chk= '/home/Zhaoxu/Project/storage/repository/former_output/ouput_50part/model.sav8'
 
 def dist_setting():
     """make sure DDP work well"""
@@ -74,9 +73,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument("--local_world_size", type=int, default=1)
+    parser.add_argument("--expe_name")
     args = parser.parse_args()
 
     rank, world = int(args.local_rank), int(args.local_world_size)
+    expe_name = args.expe_name
     dist_setting()
 
     print('loading data ...')
@@ -88,18 +89,16 @@ if __name__ == "__main__":
 
     print('building model ...')
     model = Transformer(width, dimhead, numhead, depth).cuda()
-    # if rank == 0:
-    #     try: model.load_state_dict(pt.load(chk)['model'])
-    #     except: pass
+    if rank == 0:
+        try: model.load_state_dict(pt.load(chk)['model'])
+        except: pass
     ddp_model = DDP(model, device_ids=[rank])
 
     pgrp = param_group()
-    lr_factor = math.sqrt(world)
-    lr = lr_init * math.sqrt(world)
-    optimizer = optim.AdamW(pgrp, lr=lr)
+    optimizer = optim.AdamW(pgrp, lr)
 
     def lr_lambda(current_step: int):
-        num_training_steps = 2_000_000
+        num_training_steps = 500_000
         num_warmup_steps = float(warmup_ratio * num_training_steps)
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
@@ -118,7 +117,6 @@ if __name__ == "__main__":
     ddp_model.train()
     config = {
         "lr": lr,
-        "lr_factor": lr_factor,
         "batchsize": batchsize,
         "epochsize": epochsize,
         "schedsize": schedsize,
@@ -131,14 +129,13 @@ if __name__ == "__main__":
     if rank == 0:
         print();
         print('#training model ...')
-        stat, savfn = [], f'output/{run_name}/model.sav'
+        stat, savfn = [], f'output/{expe_name}/model.sav'
         tchk = tsched = time.perf_counter()
         wandb.init(project='protein_bert', entity='zhaoxu',
                    config=config)
         wandb.watch(model)
 
     for x, y, mask, pos in dataloader:
-        # schedule
         with pt.no_grad():
             if batch % schedsize == 0:
                 sched = batch // schedsize
@@ -148,12 +145,6 @@ if __name__ == "__main__":
                              'model': model.state_dict(),
                              'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict()},
                             savfn + str(sched))
-                    # with wandb.init(project='protein_bert', job_type='load_model') as run:
-                    #     artifact = wandb.Artifact(name='model-checkpoint', type='model',
-                    #                               description='this is the checkpoint of pretrained model',
-                    #                               metadata=model_config)
-                    #     artifact.add_file(local_path=savfn + str(sched))
-                    #     run.log_artifact(artifact)
                     print('#sched[%d]: %.2e %.1fm' % (sched, optimizer.param_groups[0]['lr'], (tnow - tsched) / 60))
                     tsched = tnow
 
@@ -178,11 +169,12 @@ if __name__ == "__main__":
                 print('#prog[%.6f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch/epochsize, *stat, tnow-tchk))
                 #print('#prog[%.1f]: %.4f %.4f %.2f%% %.2f%% %.1fs' % (batch / epochsize, *stat, tnow - tchk))
                 wandb.log({"loss0": stat[0], "loss1": stat[1], "acco": stat[2], "acc1": stat[3], 
-                    "epoch": batch//epochsize +1, "current_lr": optimizer.param_groups[0]['lr']})
+                    "epoch": batch//epochsize +1, "current_lr": optimizer.param_groups[0]['lr'], "batch": batch})
                 stat, tchk = [], tnow
 
     # Mark the run as finished
     wandb.finish()
     dist.destroy_process_group()
+
 
 
