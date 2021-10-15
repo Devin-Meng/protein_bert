@@ -64,11 +64,11 @@ class SeqDataset(Dataset):
             if j == 0:    # unchange
                 pass
             elif j == 1:  # change
-                k = random.randint(1, 19)
+                k = random.randint(1, 25)
                 if k < item0[i]: item0[i] = k
                 else: item0[i] = k + 1
             else:         # mask
-                item0[i] = 22
+                item0[i] = 28
             mask[i] = 1
         return item0, item1, mask, np.array([begin, end, size], dtype=np.int32)
 

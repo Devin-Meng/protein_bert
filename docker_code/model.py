@@ -1,5 +1,4 @@
 # add gate
-
 import numpy as np
 import torch as pt
 
@@ -7,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 #from performer_pytorch import FastAttention
 
-from data import *
+from data_pipline import *
 
 
 dimgroup, dimwrap = 16, 32

@@ -18,7 +18,7 @@ from data import *
 from model import *
 
 
-lr = 8e-6
+lr = 5e-5
 sched_cycle = 64
 weight_decay = 1e-2
 batchsize = 50
@@ -47,7 +47,7 @@ def param_group():
     pgrp = [{'params': pgrp0, 'weight_decay': 0}, {'params': pgrp1, 'weight_decay': weight_decay}]
     return pgrp
 
-
+ 
 def evaluate(plst, gt, mask):
     with pt.no_grad():
         mm = (gt > 0).type_as(plst[-1])
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(pgrp, lr)
 
     def lr_lambda(current_step: int):
-        num_training_steps = 500_000
+        num_training_steps = 1500_000
         num_warmup_steps = float(warmup_ratio * num_training_steps)
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
