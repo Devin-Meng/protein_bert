@@ -29,7 +29,7 @@ dimhead = 64
 numhead = 8
 depth = 12
 
-chk= '/home/Zhaoxu/Project/storage/repository/former_output/ouput_50part/model.sav8'
+chk= '/home/Zhaoxu/Project/output/ep8-tune/model.sav15'
 
 def dist_setting():
     """make sure DDP work well"""
